@@ -57,11 +57,51 @@ std::string ServerClass::GetName(SOCKET currentSocket)
     const char* enterNameMessage = "Enter your name: ";
     send(currentSocket, enterNameMessage, strlen(enterNameMessage), 0);
     int bytesReceived = recv(currentSocket, receivedName, bufferSize - 1, 0);
+    //put null terminator at the end of the message received
     if (bytesReceived > 0)
     {
         receivedName[bytesReceived] = '\0';
     }
     return std::string(receivedName);
+}
+
+void ServerClass::SendMessage(SOCKET currentSocket,SOCKET listeningSocket,char* receiveBuffer)
+{
+
+    for (int j = 0; j < clientCount; j++)
+    {
+        if (clients[j].socket == currentSocket)
+        {
+            std::string nameAndMessageCombined = clients[j].name + " : " + std::string(receiveBuffer);
+            std::cout << "Message from " << nameAndMessageCombined << "\n";
+            const char* confirmationMessage = "Message sent!\r\n";
+            send(currentSocket, confirmationMessage, strlen(confirmationMessage), 0);
+
+            for (int k = 0; k < clientCount; k++)
+            {
+                if (clients[k].socket != listeningSocket && clients[k].socket != currentSocket)
+                {
+                    send(clients[k].socket, nameAndMessageCombined.c_str(), nameAndMessageCombined.length(), 0);
+                }
+            }
+            break;
+        }
+    }
+}
+void ServerClass::DisconnectSocket(SOCKET currentSocket,fd_set masterSet)
+{
+    closesocket(currentSocket);
+    FD_CLR(currentSocket, &masterSet);
+    std::cout << currentSocket << " Disconnected\n";
+
+    for (int j = 0; j < clientCount; j++)
+    {
+        if (clients[j].socket == currentSocket)
+        {
+            clients[j] = clients[--clientCount]; // Replace with last client
+            break;
+        }
+    }
 }
 
 void ServerClass::HandleServer(fd_set masterSet, SOCKET listeningSocket)
@@ -85,7 +125,6 @@ void ServerClass::HandleServer(fd_set masterSet, SOCKET listeningSocket)
                 {
                     std::string clientName = GetName(clientSocket);
                     clients[clientCount++] = { clientSocket, clientName };
-
                     DisplayConnectedClients(clientSocket);
                 }
                 else
@@ -102,40 +141,11 @@ void ServerClass::HandleServer(fd_set masterSet, SOCKET listeningSocket)
                 int bytesReceived = recv(currentSocket, receiveBuffer, bufferSize - 1, 0);
                 if (bytesReceived <= 0)
                 {
-                    closesocket(currentSocket);
-                    FD_CLR(currentSocket, &masterSet);
-                    std::cout << currentSocket << " Disconnected\n";
-
-                    for (int j = 0; j < clientCount; j++)
-                    {
-                        if (clients[j].socket == currentSocket)
-                        {
-                            clients[j] = clients[--clientCount]; // Replace with last client
-                            break;
-                        }
-                    }
+                    DisconnectSocket(currentSocket, masterSet);
                 }
                 else
                 {
-                    for (int j = 0; j < clientCount; j++)
-                    {
-                        if (clients[j].socket == currentSocket)
-                        {
-                            std::string nameAndMessageCombined = clients[j].name + " : " + std::string(receiveBuffer);
-                            std::cout << "Message from " << nameAndMessageCombined << "\n";
-                            const char* confirmationMessage = "Message sent!\r\n";
-                            send(currentSocket, confirmationMessage, strlen(confirmationMessage), 0);
-
-                            for (int k = 0; k < clientCount; k++)
-                            {
-                                if (clients[k].socket != listeningSocket && clients[k].socket != currentSocket)
-                                {
-                                    send(clients[k].socket, nameAndMessageCombined.c_str(), nameAndMessageCombined.length(), 0);
-                                }
-                            }
-                            break;                     
-                        }
-                    }
+                    SendMessage(currentSocket, listeningSocket, receiveBuffer);
                 }
             }
         }
