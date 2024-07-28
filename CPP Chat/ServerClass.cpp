@@ -65,7 +65,7 @@ std::string ServerClass::GetName(SOCKET currentSocket)
     return std::string(receivedName);
 }
 
-void ServerClass::SendMessage(SOCKET currentSocket,SOCKET listeningSocket,char* receiveBuffer)
+void ServerClass::SendMessages(SOCKET currentSocket, SOCKET listeningSocket, char* receiveBuffer)
 {
 
     for (int j = 0; j < clientCount; j++)
@@ -73,14 +73,12 @@ void ServerClass::SendMessage(SOCKET currentSocket,SOCKET listeningSocket,char* 
         if (clients[j].socket == currentSocket)
         {
             std::string nameAndMessageCombined = clients[j].name + " : " + std::string(receiveBuffer);
-            std::cout << "Message from " << nameAndMessageCombined << "\n";
-            const char* confirmationMessage = "Message sent!\r\n";
-            send(currentSocket, confirmationMessage, strlen(confirmationMessage), 0);
 
             for (int k = 0; k < clientCount; k++)
             {
                 if (clients[k].socket != listeningSocket && clients[k].socket != currentSocket)
                 {
+                    std::cout << nameAndMessageCombined << std::endl;
                     send(clients[k].socket, nameAndMessageCombined.c_str(), nameAndMessageCombined.length(), 0);
                 }
             }
@@ -88,7 +86,7 @@ void ServerClass::SendMessage(SOCKET currentSocket,SOCKET listeningSocket,char* 
         }
     }
 }
-void ServerClass::DisconnectSocket(SOCKET currentSocket,fd_set masterSet)
+void ServerClass::disconnectClients(SOCKET currentSocket,fd_set masterSet)
 {
     closesocket(currentSocket);
     FD_CLR(currentSocket, &masterSet);
@@ -123,9 +121,9 @@ void ServerClass::HandleServer(fd_set masterSet, SOCKET listeningSocket)
 
                 if (clientCount < MAX_CLIENTS)
                 {
+                    DisplayConnectedClients(clientSocket);
                     std::string clientName = GetName(clientSocket);
                     clients[clientCount++] = { clientSocket, clientName };
-                    DisplayConnectedClients(clientSocket);
                 }
                 else
                 {
@@ -141,11 +139,12 @@ void ServerClass::HandleServer(fd_set masterSet, SOCKET listeningSocket)
                 int bytesReceived = recv(currentSocket, receiveBuffer, bufferSize - 1, 0);
                 if (bytesReceived <= 0)
                 {
-                    DisconnectSocket(currentSocket, masterSet);
+                    disconnectClients(currentSocket, masterSet);
                 }
                 else
                 {
-                    SendMessage(currentSocket, listeningSocket, receiveBuffer);
+                    std::cout << receiveBuffer << std::endl;
+                    SendMessages(currentSocket, listeningSocket, receiveBuffer);
                 }
             }
         }

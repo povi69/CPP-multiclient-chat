@@ -33,7 +33,7 @@ void Server()
     //add to the server the fd
     FD_SET(listeningSocket, &masterSet);
 
-    serverClass.HandleServer(masterSet,listeningSocket);
+    serverClass.HandleServer(masterSet, listeningSocket);
 
     // Close Winsock
     WSACleanup();

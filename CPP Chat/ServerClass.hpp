@@ -11,6 +11,6 @@ public:
     fd_set CreateSocketSet();
     void HandleServer(fd_set masterSet, SOCKET listeningSocket);
     std::string GetName(SOCKET currentSocket);
-    void SendMessage(SOCKET currentSocket, SOCKET listeningSocket, char* receiveBuffer);
-    void DisconnectSocket(SOCKET currentSocket, fd_set masterSet);
+    void SendMessages(SOCKET currentSocket, SOCKET listeningSocket, char* receiveBuffer);
+    void disconnectClients(SOCKET currentSocket, fd_set masterSet);
 };
