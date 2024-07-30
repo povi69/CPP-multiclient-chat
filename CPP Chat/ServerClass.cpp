@@ -30,6 +30,7 @@ void ServerClass::InitializeWinsock()
         std::cout << "Can't Initialize Winsock! Quitting\n";
         return;
     }
+    std::cout << "Winsock initialized!\n";
 }
 
 SOCKET ServerClass::InitializeSocket()
@@ -40,6 +41,7 @@ SOCKET ServerClass::InitializeSocket()
         std::cout << "Can't create a socket! Quitting\n";
         return INVALID_SOCKET;
     }
+    std::cout << "Socket Initialized!\n";
     return listeningSocket;
 }
 
@@ -53,38 +55,12 @@ fd_set ServerClass::CreateSocketSet()
 
 std::string ServerClass::GetName(SOCKET currentSocket)
 {
-    char receivedName[bufferSize];
-    const char* enterNameMessage = "Enter your name: ";
-    send(currentSocket, enterNameMessage, strlen(enterNameMessage), 0);
-    int bytesReceived = recv(currentSocket, receivedName, bufferSize - 1, 0);
-    //put null terminator at the end of the message received
-    if (bytesReceived > 0)
-    {
-        receivedName[bytesReceived] = '\0';
-    }
-    return std::string(receivedName);
+    return "Ignore";
 }
 
-void ServerClass::SendMessages(SOCKET currentSocket, SOCKET listeningSocket, char* receiveBuffer)
+void ServerClass::SendMessages(SOCKET currentSocket, SOCKET listeningSocket, std::string receiveBuffer)
 {
-
-    for (int j = 0; j < clientCount; j++)
-    {
-        if (clients[j].socket == currentSocket)
-        {
-            std::string nameAndMessageCombined = clients[j].name + " : " + std::string(receiveBuffer);
-
-            for (int k = 0; k < clientCount; k++)
-            {
-                if (clients[k].socket != listeningSocket && clients[k].socket != currentSocket)
-                {
-                    std::cout << nameAndMessageCombined << std::endl;
-                    send(clients[k].socket, nameAndMessageCombined.c_str(), nameAndMessageCombined.length(), 0);
-                }
-            }
-            break;
-        }
-    }
+    send(currentSocket, receiveBuffer.c_str(),receiveBuffer.length(), 0);
 }
 void ServerClass::disconnectClients(SOCKET currentSocket,fd_set masterSet)
 {
