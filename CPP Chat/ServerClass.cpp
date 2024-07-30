@@ -47,22 +47,31 @@ SOCKET ServerClass::InitializeSocket()
 
 fd_set ServerClass::CreateSocketSet()
 {
-    // fd = File Discriptor. 
+    // fd = File Descriptor.
     fd_set masterSet;
     FD_ZERO(&masterSet);
     return masterSet;
 }
 
-std::string ServerClass::GetName(SOCKET currentSocket)
+void ServerClass::SendMessages(SOCKET currentSocket, std::string receiveBuffer)
 {
-    return "Ignore";
+    // Iterate through all connected clients
+    for (int i = 0; i < clientCount; i++)
+    {
+        // Skip sending the message to the client who sent it
+        if (clients[i].socket != currentSocket)
+        {
+            // Send the message to the client
+            int sendResult = send(clients[i].socket, receiveBuffer.c_str(), receiveBuffer.length(), 0);
+            if (sendResult == SOCKET_ERROR)
+            {
+                std::cout << "Error sending message to client socket " << clients[i].socket << ".\n";
+            }
+        }
+    }
 }
 
-void ServerClass::SendMessages(SOCKET currentSocket, SOCKET listeningSocket, std::string receiveBuffer)
-{
-    send(currentSocket, receiveBuffer.c_str(),receiveBuffer.length(), 0);
-}
-void ServerClass::disconnectClients(SOCKET currentSocket,fd_set masterSet)
+void ServerClass::disconnectClients(SOCKET currentSocket, fd_set masterSet)
 {
     closesocket(currentSocket);
     FD_CLR(currentSocket, &masterSet);
@@ -84,7 +93,6 @@ void ServerClass::HandleServer(fd_set masterSet, SOCKET listeningSocket)
     {
         fd_set copySet = masterSet;
         int readySocketCount = select(FD_SETSIZE, &copySet, nullptr, nullptr, nullptr);
-
         for (int i = 0; i < readySocketCount; i++)
         {
             SOCKET currentSocket = copySet.fd_array[i];
@@ -97,9 +105,8 @@ void ServerClass::HandleServer(fd_set masterSet, SOCKET listeningSocket)
 
                 if (clientCount < MAX_CLIENTS)
                 {
+                    clients[clientCount++].socket = clientSocket; // Add client to the array
                     DisplayConnectedClients(clientSocket);
-                    std::string clientName = GetName(clientSocket);
-                    clients[clientCount++] = { clientSocket, clientName };
                 }
                 else
                 {
@@ -119,8 +126,9 @@ void ServerClass::HandleServer(fd_set masterSet, SOCKET listeningSocket)
                 }
                 else
                 {
+                    receiveBuffer[bytesReceived] = '\0'; // Null-terminate the received data
                     std::cout << receiveBuffer << std::endl;
-                    SendMessages(currentSocket, listeningSocket, receiveBuffer);
+                    SendMessages(currentSocket, receiveBuffer);
                 }
             }
         }
