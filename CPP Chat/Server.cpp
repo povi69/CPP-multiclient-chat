@@ -21,7 +21,6 @@ void Server()
     serverAddress.sin_family = AF_INET;
     serverAddress.sin_port = htons(PORT);
     serverAddress.sin_addr.S_un.S_addr = INADDR_ANY;
-
     bind(listeningSocket, (sockaddr*)&serverAddress, sizeof(serverAddress));
 
     // Tell Winsock the socket is for listening
@@ -33,7 +32,7 @@ void Server()
     //add to the server the fd
     FD_SET(listeningSocket, &masterSet);
 
-    serverClass.HandleServer(masterSet,listeningSocket);
+    serverClass.HandleServer(masterSet, listeningSocket);
 
     // Close Winsock
     WSACleanup();

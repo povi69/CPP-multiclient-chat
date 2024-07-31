@@ -1,8 +1,6 @@
 #include "ServerClass.hpp"
 #include <iostream>
-
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
-
 #define MAX_CLIENTS 64
 
 struct SocketStruct
@@ -30,6 +28,7 @@ void ServerClass::InitializeWinsock()
         std::cout << "Can't Initialize Winsock! Quitting\n";
         return;
     }
+    std::cout << "Winsock initialized!\n";
 }
 
 SOCKET ServerClass::InitializeSocket()
@@ -40,28 +39,50 @@ SOCKET ServerClass::InitializeSocket()
         std::cout << "Can't create a socket! Quitting\n";
         return INVALID_SOCKET;
     }
+    std::cout << "Socket Initialized!\n";
     return listeningSocket;
 }
 
 fd_set ServerClass::CreateSocketSet()
 {
-    // fd = File Discriptor. 
+    // fd = File Descriptor.
     fd_set masterSet;
     FD_ZERO(&masterSet);
     return masterSet;
 }
 
-std::string ServerClass::GetName(SOCKET currentSocket)
+void ServerClass::SendMessages(SOCKET currentSocket, std::string receiveBuffer)
 {
-    char receivedName[bufferSize];
-    const char* enterNameMessage = "Enter your name: ";
-    send(currentSocket, enterNameMessage, strlen(enterNameMessage), 0);
-    int bytesReceived = recv(currentSocket, receivedName, bufferSize - 1, 0);
-    if (bytesReceived > 0)
+    // Iterate through all connected clients
+    for (int i = 0; i < clientCount; i++)
     {
-        receivedName[bytesReceived] = '\0';
+        // Skip sending the message to the client who sent it
+        if (clients[i].socket != currentSocket)
+        {
+            // Send the message to the client
+            int sendResult = send(clients[i].socket, receiveBuffer.c_str(), receiveBuffer.length(), 0);
+            if (sendResult == SOCKET_ERROR)
+            {
+                std::cout << "Error sending message to client socket " << clients[i].socket << ".\n";
+            }
+        }
     }
-    return std::string(receivedName);
+}
+
+void ServerClass::disconnectClients(SOCKET currentSocket, fd_set masterSet)
+{
+    closesocket(currentSocket);
+    FD_CLR(currentSocket, &masterSet);
+    std::cout << currentSocket << " Disconnected\n";
+
+    for (int j = 0; j < clientCount; j++)
+    {
+        if (clients[j].socket == currentSocket)
+        {
+            clients[j] = clients[--clientCount]; // Replace with last client
+            break;
+        }
+    }
 }
 
 void ServerClass::HandleServer(fd_set masterSet, SOCKET listeningSocket)
@@ -70,7 +91,6 @@ void ServerClass::HandleServer(fd_set masterSet, SOCKET listeningSocket)
     {
         fd_set copySet = masterSet;
         int readySocketCount = select(FD_SETSIZE, &copySet, nullptr, nullptr, nullptr);
-
         for (int i = 0; i < readySocketCount; i++)
         {
             SOCKET currentSocket = copySet.fd_array[i];
@@ -83,9 +103,7 @@ void ServerClass::HandleServer(fd_set masterSet, SOCKET listeningSocket)
 
                 if (clientCount < MAX_CLIENTS)
                 {
-                    std::string clientName = GetName(clientSocket);
-                    clients[clientCount++] = { clientSocket, clientName };
-
+                    clients[clientCount++].socket = clientSocket; // Add client to the array
                     DisplayConnectedClients(clientSocket);
                 }
                 else
@@ -102,40 +120,13 @@ void ServerClass::HandleServer(fd_set masterSet, SOCKET listeningSocket)
                 int bytesReceived = recv(currentSocket, receiveBuffer, bufferSize - 1, 0);
                 if (bytesReceived <= 0)
                 {
-                    closesocket(currentSocket);
-                    FD_CLR(currentSocket, &masterSet);
-                    std::cout << currentSocket << " Disconnected\n";
-
-                    for (int j = 0; j < clientCount; j++)
-                    {
-                        if (clients[j].socket == currentSocket)
-                        {
-                            clients[j] = clients[--clientCount]; // Replace with last client
-                            break;
-                        }
-                    }
+                    disconnectClients(currentSocket, masterSet);
                 }
                 else
                 {
-                    for (int j = 0; j < clientCount; j++)
-                    {
-                        if (clients[j].socket == currentSocket)
-                        {
-                            std::string nameAndMessageCombined = clients[j].name + " : " + std::string(receiveBuffer);
-                            std::cout << "Message from " << nameAndMessageCombined << "\n";
-                            const char* confirmationMessage = "Message sent!\r\n";
-                            send(currentSocket, confirmationMessage, strlen(confirmationMessage), 0);
-
-                            for (int k = 0; k < clientCount; k++)
-                            {
-                                if (clients[k].socket != listeningSocket && clients[k].socket != currentSocket)
-                                {
-                                    send(clients[k].socket, nameAndMessageCombined.c_str(), nameAndMessageCombined.length(), 0);
-                                }
-                            }
-                            break;                     
-                        }
-                    }
+                    receiveBuffer[bytesReceived] = '\0'; // Null-terminate the received data
+                    std::cout << receiveBuffer << std::endl;
+                    SendMessages(currentSocket, receiveBuffer);
                 }
             }
         }
