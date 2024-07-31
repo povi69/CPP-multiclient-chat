@@ -1,8 +1,6 @@
 #include "ServerClass.hpp"
 #include <iostream>
-
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
-
 #define MAX_CLIENTS 64
 
 struct SocketStruct
