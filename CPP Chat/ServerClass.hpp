@@ -3,19 +3,9 @@
 #include <iostream>
 
 
-/**
- * @brief Class for managing server operations including initializing Winsock, handling client connections,sending
- * and receiving messages.
- *
- */
 class ServerClass
 {
 public:
-    /**
-    * @brief The size of the buffer used for receiving messages.
-    */
-    static constexpr int bufferSize = 4096;
-
     /**
      * @brief Displays the information of the connected client.
      * @param currentSocket The socket of the currently connected client.
@@ -59,5 +49,7 @@ public:
      * @param masterSet The set of sockets being monitored.
      */
     void disconnectClients(SOCKET currentSocket, fd_set masterSet);
+private:
+    static constexpr int bufferSize = 4096;
 };
 

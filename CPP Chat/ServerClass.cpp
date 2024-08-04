@@ -1,16 +1,6 @@
 #include "ServerClass.hpp"
 #include <iostream>
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
-#define MAX_CLIENTS 64
-
-struct SocketStruct
-{
-    SOCKET socket;  // The user's connected socket
-    std::string name;    // The name of the connected user
-};
-
-SocketStruct clients[MAX_CLIENTS];
-int clientCount = 0;
 
 void ServerClass::DisplayConnectedClients(SOCKET currentSocket)
 {
@@ -53,19 +43,11 @@ fd_set ServerClass::CreateSocketSet()
 
 void ServerClass::SendMessages(SOCKET currentSocket, std::string receiveBuffer)
 {
-    // Iterate through all connected clients
-    for (int i = 0; i < clientCount; i++)
+    // Send the message to the client
+    int sendResult = send(currentSocket, receiveBuffer.c_str(), receiveBuffer.length(), 0);
+    if (sendResult == SOCKET_ERROR)
     {
-        // Skip sending the message to the client who sent it
-        if (clients[i].socket != currentSocket)
-        {
-            // Send the message to the client
-            int sendResult = send(clients[i].socket, receiveBuffer.c_str(), receiveBuffer.length(), 0);
-            if (sendResult == SOCKET_ERROR)
-            {
-                std::cout << "Error sending message to client socket " << clients[i].socket << ".\n";
-            }
-        }
+        std::cout << "Error sending message to client socket " << currentSocket << ".\n";
     }
 }
 
@@ -74,15 +56,6 @@ void ServerClass::disconnectClients(SOCKET currentSocket, fd_set masterSet)
     closesocket(currentSocket);
     FD_CLR(currentSocket, &masterSet);
     std::cout << currentSocket << " Disconnected\n";
-
-    for (int j = 0; j < clientCount; j++)
-    {
-        if (clients[j].socket == currentSocket)
-        {
-            clients[j] = clients[--clientCount]; // Replace with last client
-            break;
-        }
-    }
 }
 
 void ServerClass::HandleServer(fd_set masterSet, SOCKET listeningSocket)
@@ -100,17 +73,7 @@ void ServerClass::HandleServer(fd_set masterSet, SOCKET listeningSocket)
                 // Accept a new connection
                 SOCKET clientSocket = accept(listeningSocket, nullptr, nullptr);
                 FD_SET(clientSocket, &masterSet);
-
-                if (clientCount < MAX_CLIENTS)
-                {
-                    clients[clientCount++].socket = clientSocket; // Add client to the array
-                    DisplayConnectedClients(clientSocket);
-                }
-                else
-                {
-                    std::cout << "Max clients reached. Cannot accept more connections.\n";
-                    closesocket(clientSocket);
-                }
+                DisplayConnectedClients(clientSocket);
             }
             else
             {
