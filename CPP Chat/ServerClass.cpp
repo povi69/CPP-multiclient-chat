@@ -2,9 +2,8 @@
 #include <iostream>
 #include <vector>
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
-#define MAX_CLIENTS 64
 
-SOCKET clients[MAX_CLIENTS];
+SOCKET clients[ServerClass::MAX_CLIENTS];
 int clientCount = 0;
 
 
@@ -21,7 +20,7 @@ void ServerClass::InitializeWinsock()
     int winsockInitResult = WSAStartup(winsockVersion, &winsockData);
     if (winsockInitResult != 0)
     {
-        std::cout << "Can't Initialize Winsock! Quitting\n";
+        throw std::runtime_error("Can't Initialize Winsock! Quitting");
         return;
     }
     std::cout << "Winsock initialized!\n";
@@ -32,7 +31,8 @@ SOCKET ServerClass::InitializeSocket()
     SOCKET listeningSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (listeningSocket == INVALID_SOCKET)
     {
-        std::cout << "Can't create a socket! Quitting\n";
+        throw std::runtime_error("Can't Initialize Socket Quitting");
+
         return INVALID_SOCKET;
     }
     std::cout << "Socket Initialized!\n";
@@ -120,7 +120,7 @@ void ServerClass::HandleServer(fd_set& masterSet, const SOCKET& listeningSocket)
                     // Now receive the actual message based on the received length
                     if (messageLength > 0)
                     {
-                        std::vector<char> receiveBuffer(messageLength + 1); // +1 for null terminator
+                        std::vector<char> receiveBuffer(messageLength + 1); // +1 for \0 
                         ZeroMemory(receiveBuffer.data(), messageLength + 1);
                         bytesReceived = recv(currentSocket, receiveBuffer.data(), messageLength, 0);
                         if (bytesReceived <= 0)
@@ -129,7 +129,7 @@ void ServerClass::HandleServer(fd_set& masterSet, const SOCKET& listeningSocket)
                         }
                         else
                         {
-                            receiveBuffer[messageLength] = '\0'; // Null-terminate the string
+                            receiveBuffer[messageLength] = '\0';
                             std::cout << receiveBuffer.data() << std::endl;
                             SendMessages(currentSocket, std::string(receiveBuffer.data()));
                         }

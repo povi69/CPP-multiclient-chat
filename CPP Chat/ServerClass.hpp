@@ -7,9 +7,9 @@ class ServerClass
 {
 private: 
     static constexpr int bufferSize = 4096;
-
 public:
-    
+    static const int MAX_CLIENTS = 64;
+
 
     /**
      * @brief Displays the information of the connected client.
