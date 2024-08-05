@@ -5,22 +5,20 @@
 
 class ServerClass
 {
+private: 
+    static constexpr int bufferSize = 4096;
+
 public:
+    
+
     /**
      * @brief Displays the information of the connected client.
      * @param currentSocket The socket of the currently connected client.
      */
-    void DisplayConnectedClients(SOCKET currentSocket);
+    void DisplayConnectedClients(const SOCKET& currentSocket);
 
-    /**
-     * @brief Initializes the Winsock library.
-     */
     void InitializeWinsock();
 
-    /**
-     * @brief Creates and initializes a listening socket for the server.
-     * @return The initialized socket. Returns INVALID_SOCKET if an error occurs.
-     */
     SOCKET InitializeSocket();
 
     /**
@@ -34,22 +32,19 @@ public:
      * @param masterSet The set of sockets to monitor for incoming connections and messages.
      * @param listeningSocket The socket that listens for new client connections.
      */
-    void HandleServer(fd_set masterSet, SOCKET listeningSocket);
+    void HandleServer(fd_set& masterSet, const SOCKET& listeningSocket);
 
     /**
      * @brief Sends messages to all connected clients except the sender.
      * @param currentSocket The socket of the client sending the message.
      * @param receiveBuffer The message to be sent.
      */
-    void SendMessages(SOCKET currentSocket, std::string receiveBuffer);
+    void SendMessages(const SOCKET& currentSocket, const std::string& receiveBuffer);
 
     /**
      * @brief Disconnects a client and removes it from the set of monitored sockets.
      * @param currentSocket The socket of the client to be disconnected.
      * @param masterSet The set of sockets being monitored.
      */
-    void disconnectClients(SOCKET currentSocket, fd_set masterSet);
-private:
-    static constexpr int bufferSize = 4096;
+    void disconnectClients(const SOCKET& currentSocket, fd_set& masterSet);
 };
-

@@ -1,8 +1,14 @@
 #include "ServerClass.hpp"
 #include <iostream>
+#include <vector>
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
+#define MAX_CLIENTS 64
 
-void ServerClass::DisplayConnectedClients(SOCKET currentSocket)
+SOCKET clients[MAX_CLIENTS];
+int clientCount = 0;
+
+
+void ServerClass::DisplayConnectedClients(const SOCKET& currentSocket)
 {
     std::cout << currentSocket << " Connected!\n";
 }
@@ -35,30 +41,46 @@ SOCKET ServerClass::InitializeSocket()
 
 fd_set ServerClass::CreateSocketSet()
 {
-    // fd = File Descriptor.
     fd_set masterSet;
     FD_ZERO(&masterSet);
     return masterSet;
 }
 
-void ServerClass::SendMessages(SOCKET currentSocket, std::string receiveBuffer)
+void ServerClass::SendMessages(const SOCKET& currentSocket, const std::string& receiveBuffer)
 {
-    // Send the message to the client
-    int sendResult = send(currentSocket, receiveBuffer.c_str(), receiveBuffer.length(), 0);
-    if (sendResult == SOCKET_ERROR)
+    size_t messageLength = receiveBuffer.length(); // Get the exact size of the message received
+
+    for (int i = 0; i < clientCount; i++)
     {
-        std::cout << "Error sending message to client socket " << currentSocket << ".\n";
+        if (clients[i] != currentSocket)
+        {
+            int sendResult = send(clients[i], receiveBuffer.c_str(), messageLength, 0);
+            if (sendResult == SOCKET_ERROR)
+            {
+                std::cout << "Error sending message to client socket " << clients[i] << ".\n";
+            }
+        }
     }
 }
 
-void ServerClass::disconnectClients(SOCKET currentSocket, fd_set masterSet)
+
+void ServerClass::disconnectClients(const SOCKET& currentSocket, fd_set& masterSet)
 {
     closesocket(currentSocket);
     FD_CLR(currentSocket, &masterSet);
     std::cout << currentSocket << " Disconnected\n";
+
+    for (int j = 0; j < clientCount; j++)
+    {
+        if (clients[j] == currentSocket)
+        {
+            clients[j] = clients[--clientCount]; // Replace with last client and decrease count
+            break;
+        }
+    }
 }
 
-void ServerClass::HandleServer(fd_set masterSet, SOCKET listeningSocket)
+void ServerClass::HandleServer(fd_set& masterSet, const SOCKET& listeningSocket)
 {
     while (true)
     {
@@ -70,26 +92,48 @@ void ServerClass::HandleServer(fd_set masterSet, SOCKET listeningSocket)
 
             if (currentSocket == listeningSocket)
             {
-                // Accept a new connection
                 SOCKET clientSocket = accept(listeningSocket, nullptr, nullptr);
                 FD_SET(clientSocket, &masterSet);
-                DisplayConnectedClients(clientSocket);
+
+                if (clientCount < MAX_CLIENTS)
+                {
+                    clients[clientCount++] = clientSocket; // Add client socket
+                    DisplayConnectedClients(clientSocket);
+                }
+                else
+                {
+                    std::cout << "Max clients reached. Cannot accept more connections.\n";
+                    closesocket(clientSocket);
+                }
             }
             else
             {
-                char receiveBuffer[bufferSize];
-                ZeroMemory(receiveBuffer, bufferSize);
-
-                int bytesReceived = recv(currentSocket, receiveBuffer, bufferSize - 1, 0);
+                // First, receive the length of the message (4 bytes for an int)
+                int messageLength = 0;
+                int bytesReceived = recv(currentSocket, reinterpret_cast<char*>(&messageLength), sizeof(messageLength), 0);
                 if (bytesReceived <= 0)
                 {
                     disconnectClients(currentSocket, masterSet);
                 }
                 else
                 {
-                    receiveBuffer[bytesReceived] = '\0'; // Null-terminate the received data
-                    std::cout << receiveBuffer << std::endl;
-                    SendMessages(currentSocket, receiveBuffer);
+                    // Now receive the actual message based on the received length
+                    if (messageLength > 0)
+                    {
+                        std::vector<char> receiveBuffer(messageLength + 1); // +1 for null terminator
+                        ZeroMemory(receiveBuffer.data(), messageLength + 1);
+                        bytesReceived = recv(currentSocket, receiveBuffer.data(), messageLength, 0);
+                        if (bytesReceived <= 0)
+                        {
+                            disconnectClients(currentSocket, masterSet);
+                        }
+                        else
+                        {
+                            receiveBuffer[messageLength] = '\0'; // Null-terminate the string
+                            std::cout << receiveBuffer.data() << std::endl;
+                            SendMessages(currentSocket, std::string(receiveBuffer.data()));
+                        }
+                    }
                 }
             }
         }

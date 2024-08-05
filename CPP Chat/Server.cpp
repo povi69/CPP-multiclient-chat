@@ -26,18 +26,20 @@ void Server()
     // Tell Winsock the socket is for listening
     listen(listeningSocket, SOMAXCONN);
 
-    //create a Set of Sockets.
+    // Create a set of sockets
     fd_set masterSet = serverClass.CreateSocketSet();
 
-    //add to the server the fd
+    // Add the server's listening socket to the set
     FD_SET(listeningSocket, &masterSet);
 
     serverClass.HandleServer(masterSet, listeningSocket);
 
-    // Close Winsock
+    // Clean up Winsock
     WSACleanup();
 }
-void main()
+
+int main()
 {
     Server();
+    return 0;
 }
