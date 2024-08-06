@@ -6,47 +6,71 @@
 SOCKET clients[ServerClass::MAX_CLIENTS];
 int clientCount = 0;
 
+void ServerClass::run()
+{
+    ServerClass serverClass;
+    serverClass.initializeWinsock();
+    SOCKET listeningSocket = serverClass.initializeSocket();
 
-void ServerClass::DisplayConnectedClients(const SOCKET& currentSocket)
+    // Bind the socket to an IP address and port
+    sockaddr_in serverAddress;
+    serverAddress.sin_family = AF_INET;
+    serverAddress.sin_port = htons(ServerClass::PORT);
+    serverAddress.sin_addr.S_un.S_addr = INADDR_ANY;
+    bind(listeningSocket, (sockaddr*)&serverAddress, sizeof(serverAddress));
+
+    // Tell Winsock the socket is for listening
+    listen(listeningSocket, SOMAXCONN);
+
+    // Create a set of sockets
+    fd_set masterSet = serverClass.createSocketSet();
+
+    // Add the server's listening socket to the set
+    FD_SET(listeningSocket, &masterSet);
+
+    serverClass.handleServer(masterSet, listeningSocket);
+
+    // Clean up Winsock
+    WSACleanup();
+}
+void ServerClass::displayConnectedClients(const SOCKET& currentSocket)
 {
     std::cout << currentSocket << " Connected!\n";
 }
 
-void ServerClass::InitializeWinsock()
+void ServerClass::initializeWinsock()
 {
     // Initialize Winsock
     WSADATA winsockData;
-    WORD winsockVersion = MAKEWORD(2, 2);
+    WORD winsockVersion = WINSOCK_VERSION;
     int winsockInitResult = WSAStartup(winsockVersion, &winsockData);
     if (winsockInitResult != 0)
     {
         throw std::runtime_error("Can't Initialize Winsock! Quitting");
-        return;
     }
     std::cout << "Winsock initialized!\n";
 }
 
-SOCKET ServerClass::InitializeSocket()
+SOCKET ServerClass::initializeSocket()
 {
     SOCKET listeningSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (listeningSocket == INVALID_SOCKET)
     {
         throw std::runtime_error("Can't Initialize Socket Quitting");
 
-        return INVALID_SOCKET;
     }
     std::cout << "Socket Initialized!\n";
     return listeningSocket;
 }
 
-fd_set ServerClass::CreateSocketSet()
+fd_set ServerClass::createSocketSet()
 {
     fd_set masterSet;
     FD_ZERO(&masterSet);
     return masterSet;
 }
 
-void ServerClass::SendMessages(const SOCKET& currentSocket, const std::string& receiveBuffer)
+void ServerClass::sendMessages(const SOCKET& currentSocket, const std::string& receiveBuffer)
 {
     size_t messageLength = receiveBuffer.length(); // Get the exact size of the message received
 
@@ -80,7 +104,7 @@ void ServerClass::disconnectClients(const SOCKET& currentSocket, fd_set& masterS
     }
 }
 
-void ServerClass::HandleServer(fd_set& masterSet, const SOCKET& listeningSocket)
+void ServerClass::handleServer(fd_set& masterSet, const SOCKET& listeningSocket)
 {
     while (true)
     {
@@ -98,7 +122,7 @@ void ServerClass::HandleServer(fd_set& masterSet, const SOCKET& listeningSocket)
                 if (clientCount < MAX_CLIENTS)
                 {
                     clients[clientCount++] = clientSocket; // Add client socket
-                    DisplayConnectedClients(clientSocket);
+                    displayConnectedClients(clientSocket);
                 }
                 else
                 {
@@ -131,7 +155,7 @@ void ServerClass::HandleServer(fd_set& masterSet, const SOCKET& listeningSocket)
                         {
                             receiveBuffer[messageLength] = '\0';
                             std::cout << receiveBuffer.data() << std::endl;
-                            SendMessages(currentSocket, std::string(receiveBuffer.data()));
+                            sendMessages(currentSocket, std::string(receiveBuffer.data()));
                         }
                     }
                 }

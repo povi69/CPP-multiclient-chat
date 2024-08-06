@@ -3,43 +3,22 @@
 #include <vector>
 #include "ServerClass.hpp"
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
-constexpr int PORT = 12345;
-constexpr int BufferSize = 4096;
-
 // Adding ws2_32.lib library to the linker
 #pragma comment (lib, "ws2_32.lib")
 
-// Using standard namespace
-void Server()
-{
-    ServerClass serverClass;
-    serverClass.InitializeWinsock();
-    SOCKET listeningSocket = serverClass.InitializeSocket();
 
-    // Bind the socket to an IP address and port
-    sockaddr_in serverAddress;
-    serverAddress.sin_family = AF_INET;
-    serverAddress.sin_port = htons(PORT);
-    serverAddress.sin_addr.S_un.S_addr = INADDR_ANY;
-    bind(listeningSocket, (sockaddr*)&serverAddress, sizeof(serverAddress));
 
-    // Tell Winsock the socket is for listening
-    listen(listeningSocket, SOMAXCONN);
-
-    // Create a set of sockets
-    fd_set masterSet = serverClass.CreateSocketSet();
-
-    // Add the server's listening socket to the set
-    FD_SET(listeningSocket, &masterSet);
-
-    serverClass.HandleServer(masterSet, listeningSocket);
-
-    // Clean up Winsock
-    WSACleanup();
-}
 
 int main()
 {
-    Server();
-    return 0;
+    try {
+        ServerClass serverClass;
+        serverClass.run();
+    }
+    catch(const std::exception& e)
+    {
+        std::cout << "Exception catch: " << e.what();
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
 }
